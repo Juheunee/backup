@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd" >
+<mapper namespace="reservationMapper">
+
+	<resultMap id="reservationResultSet" type="reservation">
+		<result column="ROWNUM" property="rowNum" />
+		<result column="RES_NO" property="resNo" />
+		<result column="START_DATE" property="startDate" />
+		<result column="END_DATE" property="endDate" />
+		<result column="REGISTER_DATE" property="registerDate" />
+		<result column="CONTENT" property="content" />
+		<result column="STATUS" property="status" />
+		<result column="USER_NO" property="userNo" />
+		<result column="REF_PNO" property="refPno" />
+		<result column="CA_STATUS" property="caStatus" />
+		<result column="P_TITLE" property="ptitle" />
+		<result column="CARE_LIST" property="pcareList" />
+		<result column="P_NO" property="pno" />
+		<result column="FILE_PATH" property="petFile" />
+		<result column="ADDRESS" property="address" />
+		<result column="ORIGIN_NAME" property="originName" />
+		<result column="REVIEW_COUNT" property="reviewCount" />
+		<result column="REVIEW_STATUS" property="checkReview" />
+		<result column="D_FILE_PATH" property="dfilePath" />
+		<result column="D_GENDER" property="dogGender" />
+		<result column="D_NAME" property="dogName" />
+		<result column="D_BREED" property="dogBreed" />
+		<result column="USER_NAME" property="userName" />
+		<result column="USER_FILE" property="userFile" />
+		<result column="PAY_PRICE" property="payPrice" />
+		<result column="PET_AMOUNT" property="petAmount" />
+		<result column="" property="careTime" />
+	</resultMap>
+	
+	<resultMap id="reviewResultSet" type="review">
+		<result column="REV_NO" property="revNo" />
+		<result column="REV_TITLE" property="revTitle" />
+		<result column="REV_CONTENT" property="revContent" />
+		<result column="CREATE_DATE" property="createDate" />
+		<result column="A_CONTENT" property="acontent" />
+		<result column="A_DATE" property="adate" />
+		<result column="STATUS" property="status" />
+		<result column="FILE_PATH" property="filePath" />
+		<result column="REF_RESNO" property="refResNo" />
+		<result column="CHANGE_NAME" property="changeName" />
+		<result column="START_DATE" property="revStartDate" />
+		<result column="END_DATE" property="revEndDate" />
+	</resultMap>
+	
+	<resultMap id="careResultSet" type="care">
+		<result column="J_NO" property="jno" />
+		<result column="J_TITLE" property="jtitle" />
+		<result column="J_CONTENT" property="jcontent" />
+		<result column="CREATE_DATE" property="create_date" />
+		<result column="DAYS" property="days" />
+		<result column="STATUS" property="status" />
+		<result column="REF_RESNO" property="refResNo" />
+		<result column="FILE_NO" property="fileNo" />
+		<result column="ORIGIN_NAME" property="originName" />
+		<result column="CHANGE_NAME" property="changeName" />
+		<result column="FILE_PATH" property="filePath" />
+		<result column="CREATE_DATE" property="createDate" />
+		<result column="ATTACH_STATUS" property="attachStatus" />
+		<result column="FILE_LEVEL" property="fileLevel" />
+		<result column="REF_JNO" property="refJno" />
+		<result column="START_DATE" property="startDate" />
+		<result column="END_DATE" property="endDate" />
+		<result column="STATUS" property="revStatus" />
+		<result column="USER_NAME" property="userName" />
+		<result column="P_NO" property="pno" />
+		<result column="PETSITTER_NAME" property="petistterName" />
+	</resultMap>
+	
+	
+	<resultMap id="paymentResultSet" type="payment">
+		<result column="PAY_NO" property="payNo" />
+		<result column="PAY_DATE" property="payDate" />
+		<result column="PAY_DESCRIPTION" property="payDesc" />
+		<result column="PAY_PRICE" property="payPrice" />
+		<result column="STATUS" property="status" />
+		<result column="REF_RESNO" property="refResno" />
+		<result column="WEEKEND_PAY" property="weekendPay" />
+		<result column="TOTAL_PAY" property="totalPay" />
+	</resultMap>
+	<!-- 예약 리스트 총 갯수 구하는 쿼리문 -->
+	<select id="selectListCount" resultType="_int">
+	SELECT COUNT(*) 
+	  FROM RESERVATION
+	 WHERE USER_NO = #{userNo} 
+	</select>
+	
+	
+	<!-- 예약 리스트 구하는 쿼리문 -->
+	<select id="selectPetsitterList" resultMap="reservationResultSet">
+		SELECT R.RES_NO,
+			   R.START_DATE,
+		       R.END_DATE,
+		       M.ADDRESS,
+		       M.CA_STATUS,
+		       P.P_TITLE,
+		       P.CARE_LIST,
+		       P.P_NO,
+		       A.FILE_PATH AS FILE_PATH,
+		       A.ORIGIN_NAME,
+		       (SELECT COUNT(*) FROM REVIEW WHERE REF_RESNO = R.RES_NO) AS REVIEW_COUNT,
+		        CASE WHEN REV.REV_NO IS NOT NULL THEN 1 ELSE 0 END AS REVIEW_STATUS
+		FROM RESERVATION R
+		JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+		LEFT JOIN P_ATTACHMENT A ON P.P_NO = A.REF_PNO
+		LEFT JOIN REVIEW REV ON R.RES_NO = REV.REF_RESNO
+	   WHERE R.USER_NO = #{userNo}
+		 AND R.STATUS = 'Y' 
+	   ORDER BY R.START_DATE DESC
+	</select>	
+	
+	<!-- 예약 정보 넘기는 쿼리문 -->
+	<insert id="insertReservation" parameterType="reservation">
+		INSERT INTO RESERVATION(START_DATE,
+							    END_DATE,
+							    PET_AMOUNT,
+							    CONTENT,
+							    USER_NO,
+							    REF_PNO)
+						VALUES(#{startDate},
+							   #{endDate},
+							   #{petAmount},
+							   #{content},
+							   #{userNo},
+							   #{petSitterNo})	    
+	</insert>
+	
+	
+	<!-- 후기 작성폼 초기 정보 조회용 쿼리문 -->
+	<select id="selectReview" resultMap="reservationResultSet">
+		SELECT * 
+		FROM
+		RESERVATION
+		WHERE RES_NO = #{writeReviewNo}
+	</select>
+
+	
+	<!-- 후기 작성용 쿼리문 -->
+	<insert id="insertReview" parameterType="review">
+		INSERT INTO REVIEW(REV_NO,
+		                   REV_TITLE,
+		                   REV_CONTENT,
+		                   CREATE_DATE,
+		                   STATUS,
+		                   FILE_PATH,
+		                   REF_RESNO)
+					VALUES(SEQ_REVIEW.NEXTVAL,
+					       #{revTitle},
+					       #{revContent},
+					       SYSDATE,
+					       DEFAULT,
+					       #{filePath},
+					       #{rNo})
+	</insert>
+	
+	
+	<!-- 후기작성 초기 정보 불러오는 쿼리문 -->
+	<select id="updateReview" parameterType="_int" resultMap="reviewResultSet">
+		SELECT REV_TITLE, REV_CONTENT, FILE_PATH, REF_RESNO, START_DATE, END_DATE
+		  FROM REVIEW 
+		  JOIN RESERVATION ON RES_NO = REF_RESNO
+		 WHERE REF_RESNO = #{rNo}	
+	</select>
+	
+	
+	<!-- 후기 수정 업데이트용 쿼리문 -->
+	<update id="updateForm" parameterType="review">
+		UPDATE REVIEW
+		   SET REV_TITLE = #{revTitle},
+		       REV_CONTENT = #{revContent},
+		       CREATE_DATE = SYSDATE,
+		       FILE_PATH = #{filePath}
+		 WHERE REF_RESNO = #{rNo}
+		   AND STATUS = 'Y'	
+	</update>
+	
+	
+	<!-- 예약 리스트 삭제용 쿼리문 -->
+	<update id="deleteReservation" parameterType="_int">
+		UPDATE RESERVATION   
+		   SET STATUS = 'N'
+		 WHERE RES_NO = #{rNo}
+	</update>
+	
+	
+	
+	<!-- 예약 상세 조회용 쿼리문 -->
+	<select id="reservationDetail" resultMap="reservationResultSet" parameterType="_int">
+		SELECT START_DATE,
+		       END_DATE,
+		       REGISTER_DATE,
+		       RES_NO,
+		       CONTENT,
+		       D.FILE_PATH D_FILE_PATH,
+		       D.DOG_GENDER D_GENDER,
+		       D.DOG_NAME D_NAME,
+		       D.DOG_BREED D_BREED,
+		       PA.FILE_PATH FILE_PATH,
+		       PA.ORIGIN_NAME ORIGIN_NAME,
+		       M.USER_NAME USER_NAME,
+		       M.USER_NO USER_NO,
+		       R.REF_PNO REF_PNO,
+		       M.ADDRESS ADDRESS,
+		       M.FILE_PATH USER_FILE
+		  FROM RESERVATION R
+		  JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+		  LEFT JOIN P_ATTACHMENT PA ON P.P_NO = PA.REF_PNO
+		  JOIN MEMBER M ON P.USER_NO = M.USER_NO
+		  LEFT JOIN DOG D ON M.USER_NO = D.USER_NO
+		 WHERE R.RES_NO = #{rNo}	
+	</select>
+	
+	
+	<!-- 돌봄일지 페이지네이션 용 쿼리문 -->
+	<select id="selectCareCount" resultType="_int">
+	  SELECT COUNT(*) 
+		FROM JOURNAL J
+		JOIN RESERVATION R ON J.REF_RESNO = R.RES_NO
+		JOIN MEMBER M ON R.USER_NO = M.USER_NO 
+	   WHERE M.USER_NO = #{userNo}	
+		 AND USER_NAME LIKE '%' || #{keyword} || '%'
+	</select>
+	
+	<!-- 돌봄일지 리스트 조회용 쿼리문 -->
+	<select id="journalList" resultMap="careResultSet">
+		SELECT J.J_NO,
+       LISTAGG(JA.ORIGIN_NAME, ', ') WITHIN GROUP (ORDER BY JA.ORIGIN_NAME) AS ORIGIN_NAME,
+       LISTAGG(JA.CHANGE_NAME, ', ') WITHIN GROUP (ORDER BY JA.CHANGE_NAME) AS CHANGE_NAME,
+		       JA.FILE_LEVEL,
+		       JA.FILE_PATH,
+		       R.STATUS,
+		       R.START_DATE,
+		       R.END_DATE,
+		       J.CREATE_DATE,
+		       M.USER_NAME,
+		       P.P_NO,
+		       M2.USER_NAME AS PETSITTER_NAME,
+		       REF_RESNO
+		  FROM JOURNAL J
+		  LEFT JOIN J_ATTACHMENT JA ON JA.REF_JNO = J.J_NO AND JA.FILE_LEVEL = 1
+		  JOIN RESERVATION R ON J.REF_RESNO = R.RES_NO
+		  JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+		  JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		  JOIN MEMBER M2 ON P.USER_NO = M2.USER_NO
+		 WHERE M.USER_NO = #{userNo}
+		   AND J.STATUS = 'Y'	
+		   <if test="keyword != null">
+		   AND M2.USER_NAME LIKE '%' || #{keyword} || '%'
+		   </if>
+		 GROUP BY J.J_NO, 
+		 	   JA.FILE_LEVEL, 
+		 	   JA.FILE_PATH, 
+		 	   R.STATUS, 
+		 	   R.START_DATE, 
+		 	   R.END_DATE, 
+		 	   M.USER_NAME, 
+		 	   P.P_NO, 
+		 	   M2.USER_NAME,
+		 	   REF_RESNO,
+		 	   J.CREATE_DATE
+		 <if test="options == 'new' or options == null">
+		 ORDER BY J.CREATE_DATE DESC
+		 </if>
+		 <if test="options == 'old'">
+		 ORDER BY J.CREATE_DATE ASC
+		 </if>
+	</select>
+	
+	
+	
+	<!-- 돌봄일지 상세페이지 조회용 쿼리문 -->
+	<select id="careDetail" resultMap="careResultSet">
+    	SELECT J_NO, 
+	       J_TITLE, 
+	       J_CONTENT, 
+	       TO_CHAR(J.CREATE_DATE, 'YYYY-MM-DD') AS CREATE_DATE,
+	       TO_CHAR(J.CREATE_DATE, 'AM HH:MI:SS') AS DAYS, 
+	       JA.FILE_PATH, 
+	       LISTAGG(ORIGIN_NAME, ', ') WITHIN GROUP (ORDER BY ORIGIN_NAME) AS ORIGIN_NAME,
+	       LISTAGG(CHANGE_NAME, ', ') WITHIN GROUP (ORDER BY CHANGE_NAME) AS CHANGE_NAME,
+	       REF_RESNO,
+           USER_NAME
+	  FROM JOURNAL J
+ LEFT JOIN J_ATTACHMENT JA ON J_NO = REF_JNO
+      JOIN RESERVATION R ON REF_RESNO = RES_NO
+      JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+      JOIN MEMBER M ON P.USER_NO = M.USER_NO
+	 WHERE J_NO = #{jno}
+  GROUP BY J_NO, 
+           J_TITLE, 
+		   J_CONTENT, 
+   TO_CHAR(J.CREATE_DATE, 'YYYY/MM/DD HH24:MI:SS'), 
+		   JA.FILE_PATH,
+		   REF_RESNO,
+		   J.CREATE_DATE,
+           USER_NAME
+  ORDER BY J.CREATE_DATE DESC	
+	</select>
+	
+	
+	<!-- 이번주 정산금 구하는 쿼리문 -->
+	<select id="weekPay" resultType="_int">
+	<![CDATA[
+		SELECT COALESCE(SUM(P.PAY_PRICE), 0)
+		FROM PAYMENT P
+		JOIN RESERVATION R ON P.REF_RESNO = R.RES_NO
+		JOIN PETSITTER PT ON R.REF_PNO = PT.P_NO
+		JOIN MEMBER M ON PT.USER_NO = M.USER_NO
+	   WHERE M.USER_NO = #{userNo}
+		 AND P.PAY_DATE >= TRUNC(SYSDATE, 'IW') 
+		 AND P.PAY_DATE < TRUNC(SYSDATE, 'IW') + 7 	
+	]]>	 
+	</select>
+	
+	
+	<!-- 정산금 총액 구하는 쿼리문 -->
+	<select id="totalPay" resultType="_int">
+		SELECT COALESCE(SUM(PAY_PRICE), 0)
+		  FROM PAYMENT P
+		  JOIN RESERVATION R ON REF_RESNO = RES_NO
+		  JOIN PETSITTER PT ON REF_PNO = P_NO 
+		  JOIN MEMBER M ON PT.USER_NO = M.USER_NO
+		 WHERE M.USER_NO = #{userNo}
+	</select>
+	
+	
+	<!-- 정산 내역 조회용 쿼리문 -->
+	<select id="payList" resultMap="paymentResultSet">
+		SELECT PAY_NO,
+		       PAY_DATE,
+		       PAY_DESCRIPTION,
+		       PAY_PRICE,
+		       P.STATUS
+		  FROM PAYMENT P
+		  JOIN RESERVATION R ON REF_RESNO = RES_NO
+		  JOIN PETSITTER PT ON REF_PNO = P_NO 
+		  JOIN MEMBER M ON PT.USER_NO = M.USER_NO
+		  WHERE M.USER_NO = #{userNo}
+		    AND P.STATUS = 'Y'
+		  ORDER BY PAY_DATE DESC	
+	</select>
+	
+	
+	<!-- 정산 내역 ajax 요청용 쿼리 -->
+	<select id="searchPay" resultMap="paymentResultSet">
+		SELECT PAY_NO,
+		       PAY_DATE,
+		       PAY_DESCRIPTION,
+		       PAY_PRICE,
+		       P.STATUS
+		  FROM PAYMENT P
+		  JOIN RESERVATION R ON REF_RESNO = RES_NO
+		  JOIN PETSITTER PT ON REF_PNO = P_NO 
+		  JOIN MEMBER M ON PT.USER_NO = M.USER_NO
+		 WHERE M.USER_NO = #{userNo}
+		   AND P.STATUS = 'Y'
+		 <if test="startDate != null">
+		   AND P.PAY_DATE &gt;= TO_DATE(#{startDate}, 'YYYY-MM-DD')
+		   AND P.PAY_DATE &lt;= TO_DATE(#{endDate}, 'YYYY-MM-DD')+1
+		 </if>
+		 ORDER BY PAY_DATE DESC
+	</select>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<!-- 여기서부터 펫시터 전용 쿼리문 -->
+	
+	<!-- 펫시터 예약 리스트 조회용 쿼리문 -->
+	<select id="petsitterRevList" resultMap="reservationResultSet">
+       SELECT ROWNUM, A.*
+         FROM (SELECT RES_NO,
+		       R.STATUS STATUS,
+		       M.USER_NAME USER_NAME,  
+		       R.START_DATE START_DATE,
+		       R.END_DATE END_DATE,
+		       R.REGISTER_DATE REGISTER_DATE,
+		       PAY_PRICE
+		  FROM RESERVATION R
+		  JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		  LEFT JOIN PAYMENT P ON R.RES_NO = P.REF_RESNO
+		  JOIN PETSITTER PT ON R.REF_PNO = PT.P_NO
+		 WHERE PT.USER_NO = #{userNo}
+		   AND R.STATUS = 'Y'
+		   <if test="keyword != null">
+		    AND USER_NAME LIKE '%' || #{keyword} || '%'	
+		   </if>
+		 ORDER BY R.REGISTER_DATE DESC) A
+	</select>
+	
+	
+	<!-- 펫시터 예약 갯수 조회용 쿼리문 -->
+	<select id="selectListPetsitterRev" resultType="_int">
+		SELECT COUNT(*)
+		FROM RESERVATION R
+		JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		JOIN PETSITTER PT ON R.REF_PNO = PT.P_NO
+		WHERE PT.USER_NO = #{userNo}	
+		<if test="keyword != null">
+		  AND USER_NAME LIKE '%' || #{keyword} || '%'	
+		</if>
+	</select>
+	
+	
+	<!-- 펫시터 예약화면 날짜 조회 쿼리문 -->
+	<select id="dateSelect" resultMap="reservationResultSet">
+       SELECT ROWNUM, A.*
+         FROM (SELECT RES_NO,
+		       R.STATUS STATUS,
+		       M.USER_NAME USER_NAME,  
+		       R.START_DATE START_DATE,
+		       R.END_DATE END_DATE,
+		       R.REGISTER_DATE REGISTER_DATE,
+		       PAY_PRICE
+		  FROM RESERVATION R
+		  JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		  LEFT JOIN PAYMENT P ON R.RES_NO = P.REF_RESNO
+		  JOIN PETSITTER PT ON R.REF_PNO = PT.P_NO
+		 WHERE PT.USER_NO = #{userNo}
+		   AND R.STATUS = 'Y'   
+		   <if test="startDate != null">
+		    AND R.START_DATE &gt;= #{startDate} AND R.END_DATE &lt;= #{endDate}
+		   </if>
+		 ORDER BY R.REGISTER_DATE DESC) A
+	</select>
+	
+	
+	<!-- 펫시터 예약 상세 화면 조회용 쿼리문 -->			  
+	<select id="petsitterRevDetail" parameterType="_int" resultMap="reservationResultSet">
+		SELECT R.RES_NO,
+		       R.STATUS,
+		       R.START_DATE,
+		       R.END_DATE,
+		       R.REGISTER_DATE,
+		       R.CONTENT,
+		       M.USER_NAME,
+		       P.PAY_PRICE
+		  FROM RESERVATION R
+		  JOIN MEMBER M ON R.USER_NO = M.USER_NO
+		  LEFT JOIN PAYMENT P ON P.REF_RESNO = R.RES_NO
+		 WHERE RES_NO = #{rNo} 	
+	</select>
+	
+	
+	<!-- 펫시터 돌봄일지 내용 추가용 쿼리문 -->
+	<insert id="insertJournal">
+	 	INSERT INTO JOURNAL (J_NO, J_TITLE, J_CONTENT, CREATE_DATE, STATUS, REF_RESNO)
+		VALUES (SEQ_JOURNAL.NEXTVAL, #{careTitle}, #{careDesc}, SYSDATE, 'Y', #{cNo})    	
+	</insert>
+	
+	
+	<!-- 펫시터 돌봄일지 작성시 파일이 있을경우 파일 추가용 쿼리문 -->
+	<insert id="insertJournalFile" parameterType="java.util.List">
+	    INSERT INTO J_ATTACHMENT (FILE_NO, ORIGIN_NAME, 
+	    CHANGE_NAME, FILE_PATH, CREATE_DATE, STATUS, FILE_LEVEL, REF_JNO)
+	    VALUES
+		    (SEQ_J_ATTACHMENT.NEXTVAL, #{originName}, #{changeName}, 
+		    'resources/upFiles/care_upfiles/', SYSDATE, 'Y', 1, SEQ_JOURNAL.CURRVAL)
+	</insert>
+	
+	
+	<!-- 돌봄일지 관리 리스트 갯수 조회용 쿼리문 -->
+	<select id="selectJournalCount" resultType="_int">
+		SELECT COUNT(*)
+		FROM JOURNAL J
+		   JOIN RESERVATION R ON J.REF_RESNO = R.RES_NO
+		   JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+		   JOIN MEMBER M ON P.USER_NO = M.USER_NO
+		  WHERE M.USER_NO = #{userNo} 	
+	</select>
+	
+	
+	<!-- 돌봄일지 관리 리스트 조회용 쿼리문 -->
+	<select id="careJournalManagement" resultMap="careResultSet">
+		 SELECT J.J_NO,
+		        JA.FILE_LEVEL,
+		        JA.FILE_PATH,
+		        R.STATUS,
+		        R.START_DATE,
+		        R.END_DATE,
+		        J.CREATE_DATE,
+		        M2.USER_NAME,
+		        LISTAGG(JA.ORIGIN_NAME, ', ') WITHIN GROUP (ORDER BY JA.ORIGIN_NAME) AS ORIGIN_NAME,
+		        LISTAGG(JA.CHANGE_NAME, ', ') WITHIN GROUP (ORDER BY JA.CHANGE_NAME) AS CHANGE_NAME
+		   FROM JOURNAL J   
+		   LEFT JOIN J_ATTACHMENT JA ON J.J_NO = JA.REF_JNO
+		   JOIN RESERVATION R ON J.REF_RESNO = R.RES_NO
+		   JOIN PETSITTER P ON R.REF_PNO = P.P_NO
+		   JOIN MEMBER M ON P.USER_NO = M.USER_NO
+		   JOIN MEMBER M2 ON R.USER_NO = M2.USER_NO
+		  WHERE M.USER_NO = #{userNo} 
+		    AND J.STATUS = 'Y'
+	   GROUP BY J.J_NO, 
+	            JA.FILE_LEVEL, 
+	            JA.FILE_PATH, 
+	            R.STATUS, 
+	            R.START_DATE, 
+	            R.END_DATE, 
+	            J.CREATE_DATE, 
+	            M2.USER_NAME	
+		 <if test="options == 'new' or options == null">
+		 ORDER BY CREATE_DATE DESC
+		 </if>
+		 <if test="options == 'old'">
+		 ORDER BY CREATE_DATE ASC
+		 </if>
+	</select>
+	
+
+
+	<!-- 돌봄일지 수정시 초기 세팅용 쿼리문 -->
+	<select id="updateJournal" resultMap="careResultSet">
+		SELECT J_NO,
+		       J_TITLE,
+		       J_CONTENT,
+		       LISTAGG(ORIGIN_NAME, ', ') WITHIN GROUP (ORDER BY ORIGIN_NAME) AS ORIGIN_NAME,
+		       LISTAGG(CHANGE_NAME, ', ') WITHIN GROUP (ORDER BY CHANGE_NAME) AS CHANGE_NAME,
+		       FILE_PATH
+		  FROM JOURNAL
+		  LEFT JOIN J_ATTACHMENT ON J_NO = REF_JNO
+		 WHERE J_NO = #{jno} 
+		 GROUP BY 
+		       J_NO, 
+		       J_TITLE, 
+		       J_CONTENT, 
+		       FILE_PATH 	
+	</select>
+
+
+	<!-- 돌봄일지 제목,내용 수정용 쿼리문 -->
+	<update id="updateCare" parameterType="care">
+		UPDATE JOURNAL
+		SET J_TITLE = #{careTitle},
+		    J_CONTENT = #{careDesc}
+		WHERE J_NO = #{jno}    	
+	</update>
+
+
+	<!-- 돌봄일지 사진 업데이트용 쿼리문 -->
+	<update id="updateCareFile" parameterType="java.util.List">
+		UPDATE J_ATTACHMENT
+		SET ORIGIN_NAME = #{originName},
+		    CHANGE_NAME = #{changeName}
+		WHERE REF_JNO = #{jno}  	
+	</update>
+
+
+	<!-- 돌봄일지 삭제용 쿼리문 -->
+	<update id="deleteJournal">
+		UPDATE JOURNAL
+		SET STATUS = 'N'
+		WHERE J_NO = #{jno}	
+	</update>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
